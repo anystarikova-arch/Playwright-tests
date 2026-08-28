@@ -39,6 +39,23 @@ const elements: Elements[] = [
       value: '/docs/api/class-playwright',
     },
   },
+
+  {
+    locator: (page: Page): Locator => page.getByLabel('Switch between dark and light'),
+    name: 'Lightmode icon',
+  },
+
+  {
+    locator: (page: Page): Locator =>
+      page.getByRole('heading', { name: 'Playwright enables reliable' }),
+    name: 'Title',
+    text: 'Playwright enables reliable web automation for testing, scripting, and AI agents.',
+  },
+  {
+    locator: (page: Page): Locator => page.getByRole('link', { name: 'Get started' }),
+    name: 'Get started button',
+    text: 'Get started',
+  },
 ];
 
 test.describe('тесты главной страницы', () => {
