@@ -145,6 +145,14 @@ test('Проверка переключения лайт мода', async ({ pag
   await page.getByLabel('Switch between dark and light').click();
   await expect.soft(page.locator('html')).toHaveAttribute('data-theme', 'light');
 });
+['light', 'dark'].forEach((value) => {
+  test(`Проверка стилей активного ${value} мода`, async ({ page }) => {
+    await page.evaluate((value) => {
+      document.querySelector('html')?.setAttribute('data-theme', value);
+    }, value);
+    await expect(page).toHaveScreenshot(`pageWith${value}Mode.webp`);
+  });
+});
 test('Проверка заголовка страницы', async ({ page }) => {
   await page.goto('https://playwright.dev/');
   await expect
