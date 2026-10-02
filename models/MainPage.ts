@@ -1,7 +1,9 @@
 import { Page, Locator, test, expect } from '@playwright/test';
 
+type Theme = 'light' | 'dark';
+
 interface Elements {
-  locator: (page: Page) => Locator;
+  locator: Locator;
   name: string;
   text?: string;
   attribute?: {
@@ -11,13 +13,15 @@ interface Elements {
 }
 export class MainPage {
   readonly page: Page;
+  readonly switchModeIcon: Locator;
   readonly elements: Elements[];
   constructor(page: Page) {
     this.page = page;
+    const navigation = page.getByRole('navigation', { name: 'Main' });
+    this.switchModeIcon = page.getByLabel('Switch between dark and light');
     this.elements = [
       {
-        locator: (page: Page): Locator =>
-          page.getByRole('link', { name: 'Playwright logo Playwright' }),
+        locator: navigation.getByRole('link', { name: 'Playwright logo Playwright' }),
         name: 'Playwright logo link',
         text: 'Playwright',
         attribute: {
@@ -26,7 +30,7 @@ export class MainPage {
         },
       },
       {
-        locator: (page: Page): Locator => page.getByRole('link', { name: 'Docs' }),
+        locator: navigation.getByRole('link', { name: 'Docs', exact: true }),
         name: 'Docs link',
         text: 'Docs',
         attribute: {
@@ -35,7 +39,7 @@ export class MainPage {
         },
       },
       {
-        locator: (page: Page): Locator => page.getByRole('link', { name: 'API' }),
+        locator: navigation.getByRole('link', { name: 'API', exact: true }),
         name: 'Api link',
         text: 'API',
         attribute: {
@@ -43,32 +47,29 @@ export class MainPage {
           value: '/docs/api/class-playwright',
         },
       },
-
       {
-        locator: (page: Page): Locator => page.getByLabel('Switch between dark and light'),
+        locator: this.switchModeIcon,
         name: 'Lightmode icon',
       },
-
       {
-        locator: (page: Page): Locator =>
-          page.getByRole('heading', { name: 'Playwright enables reliable' }),
+        locator: page.getByRole('heading', { name: 'Playwright enables reliable' }),
         name: 'Title',
         text: 'Playwright enables reliable web automation for testing, scripting, and AI agents.',
       },
       {
-        locator: (page: Page): Locator => page.getByRole('link', { name: 'Get started' }),
+        locator: page.getByRole('link', { name: 'Get started' }),
         name: 'Get started button',
         text: 'Get started',
       },
     ];
   }
   async openMainPage() {
-    await this.page.goto('https://playwright.dev/');
+    await this.page.goto('/');
   }
-  async checkElementsVisability() {
+  async checkElementsVisibility() {
     for (const { locator, name } of this.elements)
       await test.step(`Проверка отображения элемента ${name}`, async () => {
-        await expect.soft(locator(this.page)).toBeVisible();
+        await expect.soft(locator).toBeVisible();
       });
   }
 
@@ -76,7 +77,7 @@ export class MainPage {
     for (const { locator, name, text } of this.elements)
       if (text) {
         await test.step(`Проверка названия элемента ${name}`, async () => {
-          await expect(locator(this.page)).toContainText(text);
+          await expect.soft(locator).toContainText(text);
         });
       }
   }
@@ -85,30 +86,32 @@ export class MainPage {
     for (const { locator, name, attribute } of this.elements)
       if (attribute) {
         await test.step(`Проверка атрибутов href элемента ${name}`, async () => {
-          await expect(locator(this.page)).toHaveAttribute(attribute.type, attribute.value);
+          await expect.soft(locator).toHaveAttribute(attribute.type, attribute.value);
         });
       }
   }
   async clickSwitchModeIcon() {
-    await this.page.getByLabel('Switch between dark and light').click();
+    await this.switchModeIcon.click();
   }
-  async checkDataThemeAttributeValue() {
-    await expect.soft(this.page.locator('html')).toHaveAttribute('data-theme', 'light');
+  // The toggle cycles system -> light -> dark -> system.
+  async checkSwitchModeIconState(mode: 'system' | Theme) {
+    await expect(this.switchModeIcon).toHaveAttribute('aria-label', new RegExp(`currently ${mode} mode`));
   }
-  async setDarkMode() {
-    await this.page.evaluate(() => {
-      document.querySelector('html')?.setAttribute('data-theme', 'dark');
+  async checkDataThemeAttributeValue(theme: Theme) {
+    await expect(this.page.locator('html')).toHaveAttribute('data-theme', theme);
+  }
+  async setColorScheme(theme: Theme) {
+    await this.page.emulateMedia({ colorScheme: theme });
+    // The site reads prefers-color-scheme only on load.
+    await this.page.reload();
+    await this.checkDataThemeAttributeValue(theme);
+  }
+  async checkLayout(theme: Theme) {
+    await expect(this.page).toHaveScreenshot(`pageWith-${theme}-Mode.png`, {
+      // Above-the-fold only: content further down the live site changes often.
+      fullPage: false,
+      maxDiffPixelRatio: 0.01,
+      mask: [this.page.getByRole('link', { name: /stargazers on GitHub/ })],
     });
-  }
-  async setLightMode() {
-    await this.page.evaluate(() => {
-      document.querySelector('html')?.setAttribute('data-theme', 'light');
-    });
-  }
-  async checkLayoutWithDarkMode() {
-    await expect(this.page).toHaveScreenshot(`pageWithdarkMode.webp`);
-  }
-  async checkLayoutWithLightMode() {
-    await expect(this.page).toHaveScreenshot(`pageWithlightMode.webp`);
   }
 }
