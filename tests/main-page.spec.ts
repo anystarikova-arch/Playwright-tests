@@ -29,8 +29,9 @@ test.describe('тесты главной страницы Playwright', () => {
     });
   });
 
+  // Baselines exist for macOS only (*-darwin.png), so CI on Linux skips these by the @screenshot tag.
   for (const theme of ['light', 'dark'] as const) {
-    test(`Проверка стилей с ${theme === 'light' ? 'светлой' : 'темной'} темой`, async ({ mainPage }) => {
+    test(`Проверка стилей с ${theme === 'light' ? 'светлой' : 'темной'} темой`, { tag: '@screenshot' }, async ({ mainPage }) => {
       await test.step(`Установка ${theme === 'light' ? 'светлой' : 'темной'} темы`, async () => {
         await mainPage.setColorScheme(theme);
       });
